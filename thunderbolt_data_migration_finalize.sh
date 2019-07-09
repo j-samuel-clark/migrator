@@ -2,7 +2,7 @@
 
 
 # Create a password for the migrator user. Make sure to update both scripts.
-migratorUserPassword=""
+migratorUserPassword="migrationisfun"
 
 
 log="/var/log/alectrona.log"
@@ -50,7 +50,7 @@ sleep 5
 writelog "deleting existing user if s/he exists"
 
 # Delete $username if s/he exists (and home folder)
-dscl . list "/Users/$username" && { sysadminctl -deleteUser $username -adminUser "migrator" -adminPassword "migrationisfun" > $log 2>&1 || exit 4 }
+dscl . list "/Users/$username" && { sysadminctl -deleteUser $username -adminUser "migrator" -adminPassword "$migratorUserPassword" > $log 2>&1 || exit 4 }
 
 sleep 10
 
@@ -64,7 +64,7 @@ chflags -R nouchg "/Users/$username" > $log 2>&1 || exit 8
 
 writelog "Creating new user account."
 # Create $username account
-sysadminctl -addUser $username -fullName "$username" -password "$password" -home "/Users/$username" -admin -adminUser "migrator" -adminPassword "migrationisfun" > $log 2>&1 || exit 6
+sysadminctl -addUser $username -fullName "$username" -password "$password" -home "/Users/$username" -admin -adminUser "migrator" -adminPassword "$migratorUserPassword" > $log 2>&1 || exit 6
 
 chown -R "$username":staff "/Users/$username" > $log 2>&1 # allowing non-zero exit code, certain library items fail but don't seem to matter
 
