@@ -1,7 +1,6 @@
 #!/bin/zsh
 
-# Written by Ryan Ball, Kurt Roberts and Chad Swarthout
-# Originally obtained from: https://github.com/ryangball/thunderbolt-data-migration
+# Mollie thunderbolt migrator tool. This was taken from the alectrona github repo
 
 # This variable can be used if you are testing the script
 # Set to true while testing, the rsync will be bypassed and nothing permanent will done to this Mac
@@ -9,16 +8,16 @@
 testing="true"  # (true|false)
 
 # The full path of the log file
-log="/var/log/alectrona.log"
+log="/var/log/mollie/migrator.log"
 
 # The main icon displayed in jamfHelper dialogs
-icon="/Applications/Utilities/Migration Assistant.app/Contents/Resources/MigrateAsst.icns"
+icon="/usr/local/mollie/img/mollie.png"
 
 # The location to write the preferences for the launchdaemon.
-preferences=/Library/Preferences/com.alectrona.scripts.migratorTool
+preferences=/Library/Preferences/com.mollie.scripts.migratorTool
 
 # Create a password for the migrator user. Make sure to update both scripts.
-migratorUserPassword="migrationisfun"
+migratorUserPassword="migrate"
 
 # Password Collection Messaging
 PROMPT_TITLE="Password Needed For Migration"
@@ -45,7 +44,7 @@ After Please Wait disappears from the screen, log in using your username and pas
 
 ###### Variables below this point are not intended to be modified ######
 scriptName=$(basename "$0")
-jamfHelper=/Library/Application\ Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper
+jamfHelper="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
 
 function writelog () {
     DATE=$(date +%Y-%m-%d\ %H:%M:%S)
@@ -56,7 +55,7 @@ function writelog () {
 function finish () {
     writelog "======== Finished $scriptName ========"
 		[[ -v jamfHelperPID ]] && { ps -p "$jamfHelperPID" > /dev/null && kill "$jamfHelperPID"; wait "$jamfHelperPID" 2>/dev/null }
-    [[ -f /tmp/output.txt ]] && rm /tmp/output.txt
+        [[ -f /tmp/output.txt ]] && rm /tmp/output.txt
 		[[ -v caffeinatepid ]] && kill "$caffeinatepid"
 }
 
@@ -82,17 +81,27 @@ function checkSecureTokenStatus () {
 	secureTokenStatus=$(sysadminctl -secureTokenStatus "$loggedInUser" 2>&1 | awk '{print$7}')
 	if [[ $secureTokenStatus != "ENABLED" ]]; then
 		writelog "User does not have a Secure Token. ($secureTokenStatus)"
-		/bin/launchctl asuser "$loggedInUser" "$jamfHelper" -windowType utility \
-							-title "User Data Transfer" -icon "$icon" -description "Error: Secure Token not detected. Please ensure you are not logged in with a management account. Contact IT for assistance." \
-						 	-button1 "OK" -calcelButton "1" -defaultButton "1" &>/dev/null &
+		/bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
+                            -windowType utility \
+							-title "User Data Transfer" \
+                            -icon "$icon" \
+                            -description "Error: Secure Token not detected. Please ensure you are not logged in with a management account. Contact IT for assistance." \
+						 	-button1 "OK" \
+                            -calcelButton "1" \
+                            -defaultButton "1" &>/dev/null &
 		return 1
 	fi
 }
 
 function perform_rsync () {
     writelog "Beginning rsync transfer..."
-    "$jamfHelper" -windowType fs -title "" -icon "$icon" -heading "Please wait as we transfer your old data to your new Mac..." \
-        -description "This might take awhile. You'll be prompted when complete." &>/dev/null &
+    "$jamfHelper" \
+    -windowType fs \
+    -title "" \
+    -icon "$icon" \
+    -heading "Please wait as we transfer your old data to your new Mac..." \
+    -description "This might take awhile. You'll be prompted when complete." &>/dev/null &
+    
     jamfHelperPID=$(/bin/echo $!)
 
     if [[ "$testing" != "true" ]]; then
@@ -128,7 +137,14 @@ function calculate_space_requirements () {
         return 0
     else
         writelog "Not enough free space on this Mac; exiting."
-        /bin/launchctl asuser "$loggedInUser" "$jamfHelper" -windowType utility -title "User Data Transfer" -icon "$icon" -description "Your new Mac does not have enough free space to transfer your old data over. Please contact IT for assistance." -button1 "OK" -calcelButton "1" -defaultButton "1" &>/dev/null &
+        /bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
+        -windowType utility \
+        -title "User Data Transfer" \
+        -icon "$icon" \
+        -description "Your new Mac does not have enough free space to transfer your old data over. Please contact IT for assistance." \
+        -button1 "OK" \
+        -calcelButton "1" \
+        -defaultButton "1" &>/dev/null &
         return 1
     fi
 }
@@ -141,7 +157,14 @@ function manually_find_old_user () {
     # Exit if we didn't find any users
     if [[ ${#oldUsersArray[@]} -eq 0 ]]; then
         echo "No user home folders found in: /Volumes/$tBoltVolume/Users"
-        /bin/launchctl asuser "$loggedInUser" "$jamfHelper" -windowType utility -title "User Data Transfer" -icon "$icon" -description "Could not find any user home folders on the selected Thunderbolt volume. Please contact IT for assistance." -button1 "OK" -calcelButton "1" -defaultButton "1" &>/dev/null &
+        /bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
+        -windowType utility \
+        -title "User Data Transfer" \
+        -icon "$icon" \
+        -description "Could not find any user home folders on the selected Thunderbolt volume. Please contact IT for assistance." \
+        -button1 "OK" \
+        -calcelButton "1" \
+        -defaultButton "1" &>/dev/null &
         return 1
     fi
 
@@ -191,7 +214,14 @@ function choose_tbolt_volume () {
     # Exit if we didn't find any connected Thunderbolt volumes
     if [[ ${#tboltVolumesArray[@]} -eq 0 ]]; then
         writelog "No Thunderbolt volumes connected at this time; exiting."
-        /bin/launchctl asuser "$loggedInUser" "$jamfHelper" -windowType utility -title "User Data Transfer" -icon "$icon" -description "There are no Thunderbolt volumes attached at this time.  Please contact IT for assistance." -button1 "OK" -calcelButton "1" -defaultButton "1" &>/dev/null &
+        /bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
+        -windowType utility \
+        -title "User Data Transfer" \
+        -icon "$icon" \
+        -description "There are no Thunderbolt volumes attached at this time.  Please contact IT for assistance." \
+        -button1 "OK" \
+        -calcelButton "1" \
+        -defaultButton "1" &>/dev/null &
         exit 1
     fi
 
@@ -261,7 +291,14 @@ function detect_new_tbolt_volumes () {
     # At this point the timer has run out, kill the background jamfHelper dialog and let the user know
     ps -p "$jamfHelperPID" > /dev/null && kill "$jamfHelperPID"; wait "$jamfHelperPID" 2>/dev/null
     writelog "Unable to detect a Thunderbolt volume in the amount of time specified; exiting."
-    /bin/launchctl asuser "$loggedInUser" "$jamfHelper" -windowType utility -title "User Data Transfer" -icon "$icon" -description "We were unable to detect your old Mac. If you want to try again, please contact the Help Desk." -button1 "OK" -calcelButton "1" -defaultButton "1" &>/dev/null &
+    /bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
+    -windowType utility \
+    -title "User Data Transfer" \
+    -icon "$icon" \
+    -description "We were unable to detect your old Mac. If you want to try again, please contact the Help Desk." \
+    -button1 "OK" \
+    -cancelButton "1" \
+    -defaultButton "1" &>/dev/null &
     exit 1
 }
 
@@ -328,10 +365,14 @@ function confirmConflictingUserDeletion () {
 	local userCode=$?
 	if [[ "$userCode" == "0" ]]; then
 		/bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
-						-windowType utility -title "User Data Transfer" \
-						-icon "$icon" -description "Warning: A user account ($oldUserName) has been found on the new computer that will be overwritten.  Please click Okay to confirm this is okay." \
-						-button1 "Okay" -button2 "Cancel" \
-						-cancelButton "2" -defaultButton "1" > /tmp/output.txt
+						-windowType utility \
+                        -title "User Data Transfer" \
+						-icon "$icon" \
+                        -description "Warning: A user account ($oldUserName) has been found on the new computer that will be overwritten.  Please click Okay to confirm this is okay." \
+						-button1 "Okay" \
+                        -button2 "Cancel" \
+						-cancelButton "2" \
+                        -defaultButton "1" > /tmp/output.txt
 		return $?
 	fi
 	return 0
@@ -339,10 +380,14 @@ function confirmConflictingUserDeletion () {
 
 function isUserReadyForThis () {
 	/bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
-					-windowType utility -title "User Data Transfer" \
-					-icon "$icon" -description "$finalInstructions" \
-					-button1 "Finish" -button2 "Cancel" \
-					-cancelButton "2" -defaultButton "1" > /tmp/output.txt
+					-windowType utility \
+                    -title "User Data Transfer" \
+					-icon "$icon" \
+                    -description "$finalInstructions" \
+					-button1 "Finish" \
+                    -button2 "Cancel" \
+					-cancelButton "2" \
+                    -defaultButton "1" > /tmp/output.txt
 	return $?
 }
 
@@ -364,13 +409,13 @@ function writeMigrationSettings () {
 
 function writeLaunchDaemon () {
 	writelog "Creating LaunchDaemon."
-	cat << EOLAUNCHDAEMON > /Library/LaunchDaemons/com.alectrona.scripts.migratorTool.plist
+	cat << EOLAUNCHDAEMON > /Library/LaunchDaemons/com.mollie.scripts.migratorTool.plist
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.alectrona.scripts.migratorTool</string>
+	<string>com.mollie.scripts.migratorTool</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/local/jamf/bin/jamf</string>
@@ -387,20 +432,24 @@ EOLAUNCHDAEMON
 
 function startLaunchDaemon () {
 	writelog "Starting LaunchDaemon."
-	launchctl load -w /Library/LaunchDaemons/com.alectrona.scripts.migratorTool.plist
+	launchctl load -w /Library/LaunchDaemons/com.mollie.scripts.migratorTool.plist
 }
 
+################################################################################
+######                BEGIN OPERATION - HOLD ONTO BUTTS                   ######
+################################################################################
+# Create first log
 writelog " "
 writelog "======== Starting $scriptName ========"
 
-#alectrona scriptSetup
+# Mollie scriptSetup
 caffeinate -d -i -m -u &
 caffeinatepid=$!
 
-# suppress TimeMachine offer to use thunderbolt drive as a backup drive
+# Suppress TimeMachine offer to use thunderbolt drive as a backup drive
 defaults write /Library/Preferences/com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool YES
 
-# make admin
+# Make admin
 dseditgroup -o edit -n /Local/Default -a "$userFullname" -t user admin
 
 # Wait for a GUI
@@ -414,13 +463,18 @@ fi
 
 checkSecureTokenStatus || exit 1
 
-# TODO: CHECK VERSION
-
 # Display a jamfHelper dialog with instructions as a background task
-/bin/launchctl asuser "$loggedInUser" "$jamfHelper" -windowType utility \
-		-windowPosition ul -title "User Data Transfer" -icon "$icon" \
-		-description "$instructions" -button1 "Cancel" -button2 "Choose..." \
-		-cancelButton "2" -defaultButton "1" > /tmp/output.txt &
+/bin/launchctl asuser "$loggedInUser" "$jamfHelper" \
+        -windowType utility \
+		-windowPosition ul \
+        -title "User Data Transfer" \
+        -icon "$icon" \
+		-description "$instructions" \
+        -button1 "Cancel" \
+        -button2 "Choose..." \
+		-cancelButton "2" \
+        -defaultButton "1" > /tmp/output.txt &
+
 jamfHelperPID=$(/bin/echo $!)
 
 # Attempt to detect a new thunderbolt volume or let the user choose
@@ -436,11 +490,11 @@ calculate_space_requirements ||	exit 4
 
 # Get User Password
 getUserPassword || exit 5
-# userPassword now contains the user's password, do not log it.
+## UserPassword now contains the user's password, do not log it.
 
 # Check to see that the password matches the old machine's keychain password.  If not, get the old password.
 checkUserPasswordAgainstOldKeychain && { declare oldUserPassword=$userPassword } || getOldUserPassword || exit 6
-# oldUserPassword now contains the user's old password, do not log it.
+## OldUserPassword now contains the user's old password, do not log it.
 
 # Confirm deletion of conflicting user is okay
 confirmConflictingUserDeletion || exit 7
@@ -451,40 +505,49 @@ perform_rsync || exit 8
 # Make sure user is ready for this
 isUserReadyForThis || exit 9
 
-# if testing, exit
+# If testing, exit
 [[ $testing == true ]] && exit 0
 
 # Make a migrator user
 makeMigratorUser || exit 10
 
-# set up the launchdaemon and trigger the final process
+# Set up the launchdaemon and trigger the final process
 writeMigrationSettings && writeLaunchDaemon || exit 11
 
-# do it!!!
+# Do the thing!
 startLaunchDaemon
 
 
-#############
-# Pseudocode Outline
+
+################################################################################
+## Code Outline
+################################################################################
 #
 ## Check For Thunderbolt Volumes (detect_new_tbolt_volumes && choose_tbolt_volume) || exit no volumes found.
 ##		Assign Volume to variable
+#
 ## Check for User (manually_find_old_user)
 ##		Assign User to a variable
+#
 ## Calculate space requirements
+#
 ## Collect User's New Password
 ##		Store in a variable
 ##		Check new password against old device login keychain
 ##		If different, ask for new device password
 ##			Store in a variable
+#
 ## Copy files to a staging location (/Users/$username-migratorTool)
-##		Verify?
+##      Verify?
+#
 ## Inform user about what's about to happen - you'll be logged out, your user will be deleted, and a new one created
-# Write the necessary information to a PLIST
-# Start a launchdaemon to execute the final steps
-#		Log out user
-#		Delete existing account
-#		Create new account (use old password for login password)
-#		Move files into place
+#
+## Write the necessary information to a PLIST
+#
+## Start a launchdaemon to execute the final steps
+##		Log out user
+##		Delete existing account
+##		Create new account (use old password for login password)
+##		Move files into place
 
 exit 0

@@ -1,14 +1,14 @@
 #!/bin/zsh
-
-
+################################################################################
 # Create a password for the migrator user. Make sure to update both scripts.
-migratorUserPassword="migrationisfun"
+migratorUserPassword="migrate"
 
+log="/var/log/mollie/migrator.log"
+preferences="/Library/Preferences/com.mollie.scripts.migratorTool"
 
-log="/var/log/alectrona.log"
-preferences="/Library/Preferences/com.alectrona.scripts.migratorTool"
-
-
+################################################################################
+# Functions
+################################################################################
 function writelog () {
 	DATE=$(date +%Y-%m-%d\ %H:%M:%S)
 	/bin/echo "${1}"
@@ -21,11 +21,14 @@ function exitHandler () {
 	# only delete the migrator user if we have successfully made the
 	dscl . list /Users/$username && sysadminctl -deleteUser migrator -adminUser "$username" -adminPassword "$password" > $log 2>&1
 	killall loginwindow
-	launchctl unload -w /Library/LaunchDaemons/com.alectrona.scripts.migratorTool.plist
+	launchctl unload -w /Library/LaunchDaemons/com.mollie.scripts.migratorTool.plist
 }
 
 trap exitHandler EXIT
 
+################################################################################
+# Begin - HOLD ONTO BUTTS
+################################################################################
 writelog "Starting Finalizer..."
 
 
