@@ -11,7 +11,7 @@ testing="true"  # (true|false)
 log="/var/log/mollie/migrator.log"
 
 # The main icon displayed in jamfHelper dialogs
-icon="/usr/local/mollie/img/mollie.png"
+icon="/usr/local/mollie/img/BIT_ICON.png"
 
 # The location to write the preferences for the launchdaemon.
 preferences=/Library/Preferences/com.mollie.scripts.migratorTool
@@ -171,10 +171,8 @@ function manually_find_old_user () {
     # Show list of home folders so that the user can choose their old username
     # Something like cocoadialog would be preferred here as it has a dropdown, but it's got no Dark Mode :(
     # Heredocs cause some weird allignment issues
-dialogOutput=$(/bin/launchctl asuser "$loggedInUser" /usr/bin/osascript <<EOF
-    set ASlist to the paragraphs of "$(printf '%s\n' "${oldUsersArray[@]}")"
-    choose from list ASlist with title "User Data Transfer" with prompt "Please choose your user account from your old Mac."
-EOF
+dialogOutput=$(/bin/launchctl asuser "$loggedInUser" /usr/bin/osascript -e 'set ASlist to the paragraphs of "$(printf '%s\n' "${oldUsersArray[@]}")"
+    choose from list ASlist with title "User Data Transfer" with prompt "Please choose your user account from your old Mac."'
 )
 
     # If the user chose one, store that as a variable, then see if we have enough space for the old data
